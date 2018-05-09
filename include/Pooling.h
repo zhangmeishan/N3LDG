@@ -13,7 +13,7 @@
 #include "Node.h"
 #include "Graph.h"
 #if USE_GPU
-#include "n3ldg_cuda.h"
+#include "N3LDG_cuda.h"
 #endif
 #include "profiler.h"
 
@@ -175,15 +175,6 @@ public:
         cg->addNode(this);
     }
 
-    void toNodeInfo(NodeInfo &info) const override {
-        Node::toNodeInfo(info);
-        info.input_count = ins.size();
-        for (PNode p : ins) {
-            info.input_vals.push_back(p->val.value);
-            info.input_losses.push_back(p->loss.value);
-        }
-    }
-
     PExecute generate(bool bTrain, dtype cur_drop_factor) override;
 };
 #else
@@ -281,15 +272,6 @@ public:
         cg->addNode(this);
     }
 
-    void toNodeInfo(NodeInfo &info) const override {
-        Node::toNodeInfo(info);
-        info.input_count = ins.size();
-        for (PNode p : ins) {
-            info.input_vals.push_back(p->val.value);
-            info.input_losses.push_back(p->loss.value);
-        }
-    }
-
     PExecute generate(bool bTrain, dtype cur_drop_factor) override;
 };
 #else
@@ -359,11 +341,6 @@ public:
             if (!n3ldg_cuda::Verify(n->masks.data(),
                         hit_inputs.value + idx * dim, dim,
                         "max pooling forward mask")) {
-                for (int i = 0; i < 2; ++i) {
-                    std::cout << "i:" << i << std::endl;
-                    Node *p = n->ins.at(i);
-                    std::cout << n->ins.at(i)->val[37] << std::endl;
-                }
                 abort();
             }
         }
@@ -454,13 +431,7 @@ public:
             MinPoolNode *n = static_cast<MinPoolNode*>(batch[idx]);
             if (!n3ldg_cuda::Verify(n->masks.data(),
                         hit_inputs.value + idx * dim, dim,
-                        "mix pooling forward mask")) {
-                for (int i = 0; i < 2; ++i) {
-                    std::cout << "i:" << i << std::endl;
-                    Node *p = n->ins.at(i);
-                    std::cout << n->ins.at(i)->val[37] << std::endl;
-                }
-                abort();
+                        "min pooling forward mask")) {
             }
         }
 #endif
