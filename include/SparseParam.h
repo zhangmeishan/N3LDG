@@ -37,16 +37,16 @@ class SparseParam : public BaseParam {
     inline void initial(int outDim, int inDim) {
         //not in the aligned memory pool
 #if USE_GPU
-        val.initOnMemoryAndDevice(inDim, outDim);
+        val.initOnMemoryAndDevice(outDim, inDim);
 #else
-        val.init(inDim, outDim);
+        val.init(outDim, inDim);
 #endif
         dtype bound = sqrt(6.0 / (outDim + inDim));
         //dtype bound = 0.001;
         val.random(bound);
-        grad.init(inDim, outDim);
-        aux_square.init(inDim, outDim);
-        aux_mean.init(inDim, outDim);
+        grad.init(outDim, inDim);
+        aux_square.init(outDim, inDim);
+        aux_mean.init(outDim, inDim);
         indexers.resize(inDim);
         indexers = false;
         last_update.resize(inDim);
@@ -68,7 +68,7 @@ class SparseParam : public BaseParam {
 #if TEST_CUDA
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
-            for (int idx = 0; idx < grad.col; idx++) {
+            for (int idx = 0; idx < grad.row; idx++) {
                 grad[index][idx] = 0;
             }
         }
@@ -81,7 +81,7 @@ class SparseParam : public BaseParam {
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
-            for (int idx = 0; idx < grad.col; idx++) {
+            for (int idx = 0; idx < grad.row; idx++) {
                 grad[index][idx] = 0;
             }
         }
@@ -90,11 +90,11 @@ class SparseParam : public BaseParam {
     }
 
     inline int outDim() {
-        return val.col;
+        return val.row;
     }
 
     inline int inDim() {
-        return val.row;
+        return val.col;
     }
 
     inline void updateAdagrad(dtype alpha, dtype reg, dtype eps) {
@@ -105,7 +105,7 @@ class SparseParam : public BaseParam {
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
-            for (int idx = 0; idx < grad.col; idx++) {
+            for (int idx = 0; idx < grad.row; idx++) {
                 grad[index][idx] = grad[index][idx] + val[index][idx] * reg;
                 aux_square[index][idx] = aux_square[index][idx] + grad[index][idx] * grad[index][idx];
                 val[index][idx] = val[index][idx] - grad[index][idx] * alpha / sqrt(aux_square[index][idx] + eps);
@@ -118,7 +118,7 @@ class SparseParam : public BaseParam {
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
-            for (int idx = 0; idx < grad.col; idx++) {
+            for (int idx = 0; idx < grad.row; idx++) {
                 grad[index][idx] = grad[index][idx] + val[index][idx] * reg;
                 aux_square[index][idx] = aux_square[index][idx] + grad[index][idx] * grad[index][idx];
                 val[index][idx] = val[index][idx] - grad[index][idx] * alpha / sqrt(aux_square[index][idx] + eps);
@@ -145,7 +145,7 @@ class SparseParam : public BaseParam {
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
-            for (int idx = 0; idx < grad.col; idx++) {
+            for (int idx = 0; idx < grad.row; idx++) {
                 grad[index][idx] = grad[index][idx] + val[index][idx] * reg;
                 aux_mean[index][idx] = belta1 * aux_mean[index][idx] + (1 - belta1) * grad[index][idx];
                 aux_square[index][idx] = belta2 * aux_square[index][idx] + (1 - belta2) * grad[index][idx] * grad[index][idx];
@@ -162,7 +162,7 @@ class SparseParam : public BaseParam {
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
-            for (int idx = 0; idx < grad.col; idx++) {
+            for (int idx = 0; idx < grad.row; idx++) {
                 grad[index][idx] = grad[index][idx] + val[index][idx] * reg;
                 aux_mean[index][idx] = belta1 * aux_mean[index][idx] + (1 - belta1) * grad[index][idx];
                 aux_square[index][idx] = belta2 * aux_square[index][idx] + (1 - belta2) * grad[index][idx] * grad[index][idx];
@@ -177,36 +177,35 @@ class SparseParam : public BaseParam {
     inline void randpoint(int& idx, int &idy) {
         //select indexes randomly
         std::vector<int> idRows, idCols;
-        idRows.clear();
-        idCols.clear();
         int inDim = indexers.size();
+        std::cout << "inDim:" << inDim << " val.row:" << val.row << std::endl;
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
-            idRows.push_back(index);
+            idCols.push_back(index);
         }
 
-        for (int i = 0; i < val.col; i++) {
-            idCols.push_back(i);
+        for (int i = 0; i < val.row; i++) {
+            idRows.push_back(i);
         }
 
         random_shuffle(idRows.begin(), idRows.end());
         random_shuffle(idCols.begin(), idCols.end());
 
-        idx = idRows[0];
-        idy = idCols[0];
+        idx = idCols.at(0);
+        idy = idRows.at(0);
     }
 
     dtype squareGradNorm() override {
 #if USE_GPU && !TEST_CUDA
         dtype result = n3ldg_cuda::SquareSum(grad.value, dIndexers.value,
-                indexers.size(), val.col);
+                indexers.size(), val.row);
         return result;
 #elif USE_GPU && TEST_CUDA
         dtype sumNorm = 0.0;
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
-            for (int idx = 0; idx < val.col; idx++) {
+            for (int idx = 0; idx < val.row; idx++) {
                 sumNorm += grad[index][idx] * grad[index][idx];
             }
         }
@@ -215,8 +214,9 @@ class SparseParam : public BaseParam {
                     dIndexers.value,
                     indexers.size(),
                     "sparse squareGradNorm"));
+        n3ldg_cuda::Assert(grad.verify("squareGradNorm grad"));
         dtype cuda = n3ldg_cuda::SquareSum(grad.value, dIndexers.value, inDim,
-                val.col);
+                val.row);
         n3ldg_cuda::Assert(isEqual(cuda, sumNorm));
 
         return sumNorm;
@@ -225,7 +225,7 @@ class SparseParam : public BaseParam {
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
-            for (int idx = 0; idx < val.col; idx++) {
+            for (int idx = 0; idx < val.row; idx++) {
                 sumNorm += grad[index][idx] * grad[index][idx];
             }
         }
@@ -240,7 +240,7 @@ class SparseParam : public BaseParam {
 #if TEST_CUDA
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
-            for (int idx = 0; idx < val.col; idx++) {
+            for (int idx = 0; idx < val.row; idx++) {
                 grad[index][idx] = grad[index][idx] * scale;
             }
         }
@@ -250,7 +250,7 @@ class SparseParam : public BaseParam {
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
-            for (int idx = 0; idx < val.col; idx++) {
+            for (int idx = 0; idx < val.row; idx++) {
                 grad[index][idx] = grad[index][idx] * scale;
             }
         }
@@ -258,48 +258,40 @@ class SparseParam : public BaseParam {
     }
 
     inline void value(const int& featId, Tensor1D& out) {
-        if (out.dim != val.col) {
-            std::cout << "warning: output dim not equal lookup param dim." << std::endl;
-        }
-        for (int idx = 0; idx < val.col; idx++) {
+        assert(out.dim == val.row);
+        for (int idx = 0; idx < val.row; idx++) {
             out[idx] = val[featId][idx];
         }
     }
 
     inline void value(const vector<int>& featIds, Tensor1D& out) {
-        if (out.dim != val.col) {
-            std::cout << "warning: output dim not equal lookup param dim." << std::endl;
-        }
+        assert(out.dim == val.row);
         int featNum = featIds.size();
         int featId;
         for (int i = 0; i < featNum; i++) {
             featId = featIds[i];
-            for (int idx = 0; idx < val.col; idx++) {
+            for (int idx = 0; idx < val.row; idx++) {
                 out[idx] += val[featId][idx];
             }
         }
     }
 
     inline void loss(const int& featId, const Tensor1D& loss) {
-        if (loss.dim != val.col) {
-            std::cout << "warning: loss dim not equal lookup param dim." << std::endl;
-        }
+        assert(loss.dim == val.row);
         indexers[featId] = true;
-        for (int idx = 0; idx < val.col; idx++) {
+        for (int idx = 0; idx < val.row; idx++) {
             grad[featId][idx] += loss[idx];
         }
     }
 
     inline void loss(const vector<int>& featIds, const Tensor1D& loss) {
-        if (loss.dim != val.col) {
-            std::cout << "warning: loss dim not equal lookup param dim." << std::endl;
-        }
+        assert(loss.dim == val.row);
         int featNum = featIds.size();
         int featId;
         for (int i = 0; i < featNum; i++) {
             featId = featIds[i];
             indexers[featId] = true;
-            for (int idx = 0; idx < val.col; idx++) {
+            for (int idx = 0; idx < val.row; idx++) {
                 grad[featId][idx] += loss[idx];
             }
         }
@@ -309,8 +301,8 @@ class SparseParam : public BaseParam {
         val.save(os);
         aux_square.save(os);
         aux_mean.save(os);
-        os << val.row << std::endl;
-        for (int idx = 0; idx < val.row; idx++) {
+        os << val.col << std::endl;
+        for (int idx = 0; idx < val.col; idx++) {
             os << last_update[idx] << std::endl;
         }
     }

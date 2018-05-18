@@ -51,7 +51,7 @@ public:
     }
 
     inline void initialWeights(int dim, bool tune) {
-        if (nVSize == 0 || (nVSize == 1 && nUNKId >= 0)) {
+        if (dim <=0 || nVSize == 0 || (nVSize == 1 && nUNKId >= 0)) {
             std::cout << "please check the alphabet" << std::endl;
             return;
         }
@@ -311,7 +311,7 @@ public:
             batch[idx]->compute();
             for (int i = 0; i < count; ++i) {
                 for (int j = 0; j < dim; ++j) {
-                    dtype v = drop_mask[j][i];
+                    dtype v = drop_mask[i][j];
                     batch[i]->drop_mask[j] = v <= dynamicDropValue() ?
                         0 : 1;
                 }

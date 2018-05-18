@@ -340,12 +340,14 @@ struct Tensor2D {
 
 
     //use it carefully, first col, then row, because rows are allocated successively
-    dtype* operator[](const int irow) {
-        return &(v[irow*col]);  // no boundary check?
+    dtype* operator[](const int icol) {
+        assert(icol < col);
+        return &(v[icol*row]);  // no boundary check?
     }
 
-    const dtype* operator[](const int irow) const {
-        return &(v[irow*col]);  // no boundary check?
+    const dtype* operator[](const int icol) const {
+        assert(icol < col);
+        return &(v[icol*row]);  // no boundary check?
     }
 
     //use it carefully
