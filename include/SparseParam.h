@@ -34,7 +34,7 @@ class SparseParam : public BaseParam {
 #endif
 
     // allow sparse and dense parameters have different parameter initialization methods
-    inline void initial(int outDim, int inDim) {
+    void initial(int outDim, int inDim) {
         //not in the aligned memory pool
 #if USE_GPU
         val.initOnMemoryAndDevice(outDim, inDim);
@@ -61,10 +61,10 @@ class SparseParam : public BaseParam {
 #endif
     }
 
-    inline void clearGrad() {
+    void clearGrad() {
 #if USE_GPU
         n3ldg_cuda::Memset(grad.value, grad.size, 0.0f);
-        n3ldg_cuda::Memset(dIndexers.value, grad.row, false);
+        n3ldg_cuda::Memset(dIndexers.value, grad.col, false);
 #if TEST_CUDA
         int inDim = indexers.size();
         for (int index = 0; index < inDim; index++) {
@@ -75,7 +75,7 @@ class SparseParam : public BaseParam {
         indexers = false;
         n3ldg_cuda::Assert(grad.verify("SparseParam clearGrad"));
         n3ldg_cuda::Assert(n3ldg_cuda::Verify(indexers.c_buf(),
-                    dIndexers.value, grad.row, "SparseParam indexers"));
+                    dIndexers.value, grad.col, "SparseParam indexers"));
 #endif
 #else
         int inDim = indexers.size();
@@ -89,15 +89,15 @@ class SparseParam : public BaseParam {
 #endif
     }
 
-    inline int outDim() {
+    int outDim() {
         return val.row;
     }
 
-    inline int inDim() {
+    int inDim() {
         return val.col;
     }
 
-    inline void updateAdagrad(dtype alpha, dtype reg, dtype eps) {
+    void updateAdagrad(dtype alpha, dtype reg, dtype eps) {
 #if USE_GPU
         n3ldg_cuda::UpdateAdagrad(val.value, grad.value, indexers.size(),
                 grad.col, aux_square.value, dIndexers.value, alpha, reg, eps);
@@ -127,10 +127,10 @@ class SparseParam : public BaseParam {
 #endif
     }
 
-    inline void updateAdam(dtype belta1, dtype belta2, dtype alpha, dtype reg, dtype eps) {
+    void updateAdam(dtype belta1, dtype belta2, dtype alpha, dtype reg, dtype eps) {
 #if USE_GPU
-        n3ldg_cuda::UpdateAdam(val.value, grad.value, indexers.size(),
-                grad.col,
+        n3ldg_cuda::UpdateAdam(val.value, grad.value, grad.row,
+                indexers.size(),
                 aux_mean.value,
                 aux_square.value,
                 dIndexers.value,
@@ -174,11 +174,10 @@ class SparseParam : public BaseParam {
 #endif
     }
 
-    inline void randpoint(int& idx, int &idy) {
+    void randpoint(int& idx, int &idy) {
         //select indexes randomly
         std::vector<int> idRows, idCols;
         int inDim = indexers.size();
-        std::cout << "inDim:" << inDim << " val.row:" << val.row << std::endl;
         for (int index = 0; index < inDim; index++) {
             if (!indexers[index]) continue;
             idCols.push_back(index);
@@ -234,7 +233,7 @@ class SparseParam : public BaseParam {
 #endif
     }
 
-    inline void rescaleGrad(dtype scale) {
+    void rescaleGrad(dtype scale) {
 #if USE_GPU
         n3ldg_cuda::Rescale(grad.value, grad.size, scale);
 #if TEST_CUDA
@@ -257,14 +256,12 @@ class SparseParam : public BaseParam {
 #endif
     }
 
-    inline void value(const int& featId, Tensor1D& out) {
+    void value(const int& featId, Tensor1D& out) {
         assert(out.dim == val.row);
-        for (int idx = 0; idx < val.row; idx++) {
-            out[idx] = val[featId][idx];
-        }
+        memcpy(out.v, val[featId], val.row * sizeof(dtype));
     }
 
-    inline void value(const vector<int>& featIds, Tensor1D& out) {
+    void value(const vector<int>& featIds, Tensor1D& out) {
         assert(out.dim == val.row);
         int featNum = featIds.size();
         int featId;
@@ -276,7 +273,7 @@ class SparseParam : public BaseParam {
         }
     }
 
-    inline void loss(const int& featId, const Tensor1D& loss) {
+    void loss(const int& featId, const Tensor1D& loss) {
         assert(loss.dim == val.row);
         indexers[featId] = true;
         for (int idx = 0; idx < val.row; idx++) {
@@ -284,7 +281,7 @@ class SparseParam : public BaseParam {
         }
     }
 
-    inline void loss(const vector<int>& featIds, const Tensor1D& loss) {
+    void loss(const vector<int>& featIds, const Tensor1D& loss) {
         assert(loss.dim == val.row);
         int featNum = featIds.size();
         int featId;
@@ -297,7 +294,7 @@ class SparseParam : public BaseParam {
         }
     }
 
-    inline void save(std::ofstream &os)const {
+    void save(std::ofstream &os)const {
         val.save(os);
         aux_square.save(os);
         aux_mean.save(os);
@@ -307,7 +304,7 @@ class SparseParam : public BaseParam {
         }
     }
 
-    inline void load(std::ifstream &is) {
+    void load(std::ifstream &is) {
         val.load(is);
         aux_square.load(is);
         aux_mean.load(is);

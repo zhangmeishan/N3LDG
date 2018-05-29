@@ -24,7 +24,7 @@ class PMultiNode : public Node {
         node_type = "point-multiply";
     }
   public:
-    virtual inline void clearValue() {
+    virtual void clearValue() {
         Node::clearValue();
         in1 = NULL;
         in2 = NULL;
@@ -41,7 +41,7 @@ class PMultiNode : public Node {
     }
 
   public:
-    inline void compute() {
+    void compute() {
         val.vec() = in1->val.vec() * in2->val.vec();
     }
 
@@ -52,11 +52,11 @@ class PMultiNode : public Node {
 
   public:
     // better to rewrite for deep understanding
-    inline bool typeEqual(PNode other) {
+    bool typeEqual(PNode other) {
         return Node::typeEqual(other);
     }
 
-    inline PExecute generate(bool bTrain, dtype cur_drop_factor);
+    PExecute generate(bool bTrain, dtype cur_drop_factor);
 };
 
 class PMultiExecute :public Execute {
@@ -106,34 +106,6 @@ public:
             node->compute();
             node->forward_drop(bTrain, drop_factor);
         }
-//        int count = batch.size();
-//        sumDim = 0;
-//        for (int idx = 0; idx < count; idx++) {
-//            sumDim += batch[idx]->dim;
-//        }
-//        y.init(sumDim);
-//        x1.init(sumDim);
-//        x2.init(sumDim);
-//        int offset = 0;
-//        for (int idx = 0; idx < count; idx++) {
-//            PMultiNode* ptr = (PMultiNode*)batch[idx];
-//            for (int idy = 0; idy < ptr->dim; idy++) {
-//                x1[offset + idy] = ptr->in1->val[idy];
-//                x2[offset + idy] = ptr->in2->val[idy];
-//            }
-//            offset += ptr->dim;
-//        }
-//        y.vec() = x1.vec() * x2.vec();
-
-//        offset = 0;
-//        for (int idx = 0; idx < count; idx++) {
-//            PMultiNode* ptr = (PMultiNode*)batch[idx];
-//            for (int idy = 0; idy < ptr->dim; idy++) {
-//                ptr->val[idy] = y[offset + idy];
-//            }
-//            offset += ptr->dim;
-//            ptr->forward_drop(bTrain,1);
-//        }
     }
 #endif
 
@@ -205,7 +177,7 @@ public:
 #endif
 };
 
-inline PExecute PMultiNode::generate(bool bTrain, dtype cur_drop_factor) {
+PExecute PMultiNode::generate(bool bTrain, dtype cur_drop_factor) {
     PMultiExecute* exec = new PMultiExecute();
     exec->batch.push_back(this);
     exec->bTrain = bTrain;
