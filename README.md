@@ -1,6 +1,7 @@
-N3LDG
+N3LDG (In Progress)
 ===========================
-A lightweight neural network libary based on dynamic graph for natural language processing (LibN3L-3.0)
+A lightweight neural network libary based on dynamic graph for natural language processing 
+At this time, gpu is not fullly used.   
 
 To use this library, just include the directory in your code and call it by "#include N3LDG.h"
 
@@ -13,14 +14,5 @@ You can get CMake from https://cmake.org/install/
 #### cuda
 You can get cuda from https://developer.nvidia.com/cuda-80-ga2-download-archive
 
-If you have any problem, please send an email to mason.zms@gmail.com
-## Examples:
-Some examples are realeased at:
-* https://github.com/zhangmeishan/NNTranSegmentor
-* https://github.com/yunan4nlp/N3LDGClassifier
-* https://github.com/yunan4nlp/N3LDGSemiCRFSegmentation-SegDemo
-
-for cuda usage, see:
-* https://github.com/chncwang/news-title-classification
 ## Authors:
-Zhang Meishan, Li Zhenghua, Wang Qiansheng, Yu Nan
+Zhang Meishan, Li Zhenghua, Yu Nan
