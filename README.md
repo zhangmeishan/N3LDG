@@ -15,4 +15,4 @@ You can get CMake from https://cmake.org/install/
 You can get cuda from https://developer.nvidia.com/cuda-80-ga2-download-archive
 
 ## Authors:
-Zhang Meishan, Li Zhenghua, Yu Nan
+Zhang Meishan, Yu Nan, Li Zhenghua
