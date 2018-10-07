@@ -1,7 +1,7 @@
 N3LDG (In Progress)
 ===========================
 A lightweight neural network libary based on dynamic graph for natural language processing     
-At this time, gpu is not fullly used.   
+At this time, gpu is not fully used.   
 
 To use this library, just include the directory in your code and call it by "#include N3LDG.h"
 
